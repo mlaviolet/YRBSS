@@ -4,13 +4,10 @@ library(segmented)
 library(survey) 
 library(tidyverse)
 
-# analyzing question ever smoked cigarette
-# 1991: Q23 == 1
-# 2013: Q29 == 1
-
 options(survey.lonely.psu = "adjust")
 
-# "ever smoked a cigarette" 
+# "Have you ever tried cigarette smoking, even one or two puffs?" 
+#  1 = Yes, 2 = No
 # 1991: q23
 # 1993, 2001-2009: q28
 # 1995-1997: q26
@@ -59,6 +56,11 @@ f1 <- function(year, begin, end) {
 
 chk91 <- f1(1991, c(23, 76, 84, 87), c(23, 83, 86, 91))
 chk11 <- f1(2011, c(60, 364, 374, 377), c(60, 373, 376, 382))
+chk99 <- f1(1999, c(27, 107, 118, 115),  c(27, 114, 123, 115))
+
+chk99 %>% 
+  as_survey_design(id = psu, strata = stratum, weights = weight, nest = TRUE) %>% 
+  summarize(pct = survey_mean(smoking == 1, na.rm = TRUE)) 
 
 # des <- svydesign(id = ~psu, strata = ~interaction(stratum, year),
 #                  data = y, weights = ~weight, nest = TRUE)
@@ -67,16 +69,38 @@ survyear <- seq(1991, 2011, 2)
 # qsmoke <- c(23, 28, 26, 26, 27, 28, 28, 28, 28, 28, 29)
 # chksmoke <- paste0("q", c(23, 29))
 
-begin_lst <- list(c(23, 76, 84, 87), c(60, 364, 374, 377))
-end_lst <- list(c(23, 83, 86, 91), c(60, 373, 376, 382))
+begin_lst <- list(c(23, 76, 84, 87), 
+                  c(28, 88, 98, 103), 
+                  c(26, 89, 101, 106), 
+                  c(26, 90, 102, 107), 
+                  c(41, 107, 118, 115), 
+                  c(42, 110, 118, 124), 
+                  c(43, 216, 224, 230), 
+                  c(53, 358, 370, 375), 
+                  c(59, 358, 370, 375), 
+                  c(59, 363, 376, 373), 
+                  c(60, 364, 374, 377))
+end_lst <- list(c(23, 83, 86, 91), 
+                c(28, 97, 102, 103), 
+                c(26, 100, 105, 106), 
+                c(26, 101, 106, 107), 
+                c(41, 114, 123, 115), 
+                c(42, 117, 123, 124), 
+                c(43, 223, 229, 230), 
+                c(53, 369, 374, 378), 
+                c(59, 369, 374, 378), 
+                c(59, 372, 382, 373),
+                c(60, 373, 376, 382))
 chkyear <- c(1991, 2011)
 
-chk_tbl <- tibble(year = chkyear, x2 = begin_lst, x3 = end_lst)
+chk_tbl <- tibble(year = survyear, x2 = begin_lst, x3 = end_lst)
 
 combine_tbl <- chk_tbl %>% 
   mutate(df = pmap(list(year, x2, x3), f1)) %>% 
   select(year, df) %>% 
   unnest(cols = df)
+
+count(combine_tbl, year, is.na(stratum))
 
 combine_tbl %>% 
   as_survey_design(id = psu, strata = c(year, stratum), 
