@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.pdf
+*.sas7bdat
+*.sas7bcat
+*.dat
+
+
