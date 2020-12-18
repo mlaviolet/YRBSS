@@ -22,7 +22,7 @@ f1 <- function(year, begin, end) {
   }
 
 survyear <- seq(1991, 2011, 2)
-begin_lst <- list(c(2, 3, 4,  23, 76, 84, 87), 
+begin_lst <- list(c(2, 3, 4, 23, 76, 84, 87), 
                   c(2, 3, 4, 28, 88, 98, 103), 
                   c(2, 3, 4, 26, 89, 101, 106), 
                   c(2, 3, 4, 26, 90, 102, 107), 
@@ -45,32 +45,40 @@ end_lst <- list(c(2, 3, 4, 23, 83, 86, 91),
                 c(18, 3, 394, 59, 372, 382, 373),
                 c(18, 3, 389, 60, 373, 376, 382))
 
-combine_tbl <- tibble(year = survyear, begin_lst, end_lst) %>% 
+yrbs_dat <- tibble(year = survyear, begin_lst, end_lst) %>% 
   mutate(df = pmap(list(year, begin_lst, end_lst), f1)) %>% 
   select(year, df) %>% 
-  unnest(cols = df)
+  unnest(cols = df) %>% 
+  # recode race to 1 = White, 2 = Black, 3 Hispanic any race, 4 = other
+  mutate(raceeth = case_when(
+    year %in% 1991:1997 & race == 1                ~ 1,
+    year %in% 1991:1997 & race == 2                ~ 2,
+    year %in% 1991:1997 & race == 3                ~ 3,
+    year %in% 1991:1997 & race %in% 4:6            ~ 4,
+    year %in% 1999:2005 & race == 6                ~ 1,
+    year %in% 1999:2005 & race == 3                ~ 2,
+    year %in% 1999:2005 & race %in% c(4, 7)        ~ 3,
+    year %in% 1999:2005 & race %in% c(1, 2, 5, 8)  ~ 4,
+    year %in% 2007:2011 & race == 5                ~ 1,
+    year %in% 2007:2011 & race == 3                ~ 2,
+    year %in% 2007:2011 & race %in% 6:7            ~ 3,
+    year %in% 2007:2011 & race %in% c(1, 2, 4, 8) ~ 4,
+    TRUE                                           ~ NA_real_)) %>% 
+  select(year, grade, sex, raceeth, smoking, psu, stratum, weight) %>% 
+  mutate(grade = factor(grade, 1:4, c("9th", "10th", "11th", "12th")),
+         sex = factor(sex, 1:2, c("Female", "Male")),
+         raceeth = factor(raceeth, 1:4, 
+                          c("White", "Black", "Hispanic", "Other")),
+         smoking = factor(smoking, 1:2, c("Yes", "No")))
 
-count(combine_tbl, year)
+count(yrbs_dat, year)
 
-yrbs_us <- combine_tbl %>% 
+yrbs_svy <- yrbs_dat %>% 
   as_survey_design(id = psu, strata = c(year, stratum), 
                    weights = weight, nest = TRUE) 
 
-yrbs_us %>% 
+yrbs_svy %>% 
   group_by(year) %>% 
-  summarize(pct = survey_mean(smoking == 1, na.rm = TRUE))
+  summarize(pct = survey_mean(smoking == "Yes", na.rm = TRUE))
 
-# Damico's race-Hispanic coding
-# raceeth = ifelse(year %in% 1991:1997,
-#                  ifelse(q4 %in% 1:3, q4, 
-#                         ifelse(q4 %in% 4:6, 4, NA)),
-#                  ifelse(year %in% 1999:2005,
-#                         ifelse(q4 %in% 6, 1,
-#                                ifelse(q4 %in% 3, 2,
-#                                       ifelse(q4 %in% c(4, 7), 3,
-#                                              ifelse( q4 %in% c(1, 2, 5, 8), 4, NA)))),
-#                         ifelse(year %in% 2007:2011,
-#                                ifelse(raceeth %in% 5, 1,
-#                                       ifelse(raceeth %in% 3, 2,
-#                                              ifelse(raceeth %in% c(6, 7), 3,
-#                                                     ifelse(raceeth %in% c(1, 2, 4, 8), 4, NA)))),
+
