@@ -17,43 +17,46 @@ options(survey.lonely.psu = "adjust")
 f1 <- function(year, begin, end) {
   read_fwf(here("National", paste0("yrbs", year, ".dat")), 
            fwf_positions(begin, end, 
-                         c("sex", "grade", "smoking", "weight", "psu", "stratum")))
+                         c("sex", "grade", "race",
+                           "smoking", "weight", "psu", "stratum")))
   }
 
 survyear <- seq(1991, 2011, 2)
-begin_lst <- list(c(2, 3, 23, 76, 84, 87), 
-                  c(2, 3, 28, 88, 98, 103), 
-                  c(2, 3, 26, 89, 101, 106), 
-                  c(2, 3, 26, 90, 102, 107), 
-                  c(2, 3, 41, 107, 118, 115), 
-                  c(2, 3, 42, 110, 118, 124), 
-                  c(2, 3, 43, 216, 224, 230), 
-                  c(18, 3, 53, 358, 370, 375), 
-                  c(18, 3, 59, 358, 370, 375), 
-                  c(18, 3, 59, 363, 376, 373), 
-                  c(18, 3, 60, 364, 374, 377))
-end_lst <- list(c(2, 3, 23, 83, 86, 91), 
-                c(2, 3, 28, 97, 102, 103), 
-                c(2, 3, 26, 100, 105, 106), 
-                c(2, 3, 26, 101, 106, 107), 
-                c(2, 3, 41, 114, 123, 115), 
-                c(2, 3, 42, 117, 123, 124), 
-                c(2, 3, 43, 223, 229, 230), 
-                c(18, 3, 53, 369, 374, 378), 
-                c(18, 3, 59, 369, 374, 378), 
-                c(18, 3, 59, 372, 382, 373),
-                c(18, 3, 60, 373, 376, 382))
+begin_lst <- list(c(2, 3, 4,  23, 76, 84, 87), 
+                  c(2, 3, 4, 28, 88, 98, 103), 
+                  c(2, 3, 4, 26, 89, 101, 106), 
+                  c(2, 3, 4, 26, 90, 102, 107), 
+                  c(2, 3, 4, 41, 107, 118, 115), 
+                  c(2, 3, 4, 42, 110, 118, 124), 
+                  c(2, 3, 4, 43, 216, 224, 230), 
+                  c(18, 3, 20, 53, 358, 370, 375), 
+                  c(18, 3, 384, 59, 358, 370, 375), 
+                  c(18, 3, 393, 59, 363, 376, 373), 
+                  c(18, 3, 388, 60, 364, 374, 377))
+end_lst <- list(c(2, 3, 4, 23, 83, 86, 91), 
+                c(2, 3, 4, 28, 97, 102, 103), 
+                c(2, 3, 4, 26, 100, 105, 106), 
+                c(2, 3, 4, 26, 101, 106, 107), 
+                c(2, 3, 4, 41, 114, 123, 115), 
+                c(2, 3, 4, 42, 117, 123, 124), 
+                c(2, 3, 5, 43, 223, 229, 230), 
+                c(18, 3, 21, 53, 369, 374, 378), 
+                c(18, 3, 385, 59, 369, 374, 378), 
+                c(18, 3, 394, 59, 372, 382, 373),
+                c(18, 3, 389, 60, 373, 376, 382))
 
-chk_tbl <- tibble(year = survyear, x2 = begin_lst, x3 = end_lst)
-
-combine_tbl <- chk_tbl %>% 
-  mutate(df = pmap(list(year, x2, x3), f1)) %>% 
+combine_tbl <- tibble(year = survyear, begin_lst, end_lst) %>% 
+  mutate(df = pmap(list(year, begin_lst, end_lst), f1)) %>% 
   select(year, df) %>% 
   unnest(cols = df)
 
-combine_tbl %>% 
+count(combine_tbl, year)
+
+yrbs_us <- combine_tbl %>% 
   as_survey_design(id = psu, strata = c(year, stratum), 
-                   weights = weight, nest = TRUE) %>% 
+                   weights = weight, nest = TRUE) 
+
+yrbs_us %>% 
   group_by(year) %>% 
   summarize(pct = survey_mean(smoking == 1, na.rm = TRUE))
 
