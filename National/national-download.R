@@ -23,7 +23,7 @@ walk2(data_url_list, datafile_lst,
 # this works
 download.file("ftp://ftp.cdc.gov/pub/data/yrbs/1991/YRBS1991.dat", "test2.txt",
               mode = "wb")
-
+# NOT DOWNLOADING PROPERLY FROM CUSTOM FUNCTION--CHECK OUT
 
 
 # download user guides
