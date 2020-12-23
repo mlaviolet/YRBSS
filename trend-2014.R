@@ -2,6 +2,7 @@
 #   "Conducting Trend Analyses of YRBS Data," June 2014
 # Using YRBSS data 1991, 1993, ..., 2011
 
+# data and documentation at https://www.cdc.gov/healthyyouth/data/yrbs/data.htm
 library(here)
 library(srvyr)
 library(segmented) 
